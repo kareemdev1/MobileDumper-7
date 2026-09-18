@@ -24,68 +24,20 @@ jobs:
       - name: Install Ninja
         run: sudo apt-get update && sudo apt-get install -y ninja-build
 
-      - name: Verify NDK
-        run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
-          ls -la $ANDROID_NDK_HOME
-
       - name: Build arm64 executable
         run: |
           chmod +x build.sh
           ./build.sh --platform android --target exe --build release --arch arm64
 
-      - name: Locate binary (verbose)
+      - name: Show binary location
         run: |
-          echo "=== Top-level listing ==="
-          ls -la
-          echo ""
-          echo "=== Any 'build' or 'out' folder anywhere ==="
-          find . -type d \( -name "build" -o -name "out" -o -name "output" -o -name "Release" -o -name "bin" \) -not -path "*/libs/*" -not -path "*/.git/*" 2>/dev/null
-          echo ""
-          echo "=== Any file containing MobileDumper7 in name ==="
-          find . -type f -iname "*MobileDumper7*" -not -path "*/.git/*" -not -path "*/libs/*" 2>/dev/null
-          echo ""
-          echo "=== Any executable file in build/ or out/ ==="
-          find . -type f -executable \( -path "*/build/*" -o -path "*/out/*" -o -path "*/output/*" \) -not -path "*/libs/*" -not -path "*/.git/*" 2>/dev/null
-          echo ""
-          echo "=== Files over 500KB modified in last hour ==="
-          find . -type f -size +500k -mmin -60 -not -path "*/.git/*" -not -path "*/libs/*" 2>/dev/null
-
-      - name: Stage binary for upload
-        run: |
-          mkdir -p /tmp/artifact
-          # Try every common output location and name
-          for candidate in \
-            ./MobileDumper7 \
-            ./build/MobileDumper7 \
-            ./build/Release/MobileDumper7 \
-            ./build/release/MobileDumper7 \
-            ./build/android-arm64/MobileDumper7 \
-            ./build/exe/MobileDumper7 \
-            ./out/MobileDumper7 \
-            ./output/MobileDumper7
-          do
-            if [ -f "$candidate" ]; then
-              echo "Found: $candidate"
-              cp "$candidate" /tmp/artifact/
-            fi
-          done
-          # Catch-all: any executable named like the dumper
-          find . -type f -iname "*MobileDumper7*" -not -path "*/.git/*" -not -path "*/libs/*" -exec cp {} /tmp/artifact/ \; 2>/dev/null || true
-          # Fallback: grab the biggest recent executable in build/
-          BIG=$(find . -type f -executable -path "*/build/*" -not -path "*/libs/*" -printf "%s %p\n" 2>/dev/null | sort -rn | head -1 | awk '{print $2}')
-          if [ -n "$BIG" ] && [ ! -z "$(echo $BIG | tr -d ' ')" ]; then
-            echo "Fallback biggest binary: $BIG"
-            cp "$BIG" /tmp/artifact/ 2>/dev/null || true
-          fi
-          echo ""
-          echo "=== /tmp/artifact contents ==="
-          ls -la /tmp/artifact/
+          ls -la builds/android/exe/release/arm64/ || true
+          file builds/android/exe/release/arm64/MobileDumper-7 || true
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: MobileDumper7-arm64
-          path: /tmp/artifact/
+          name: MobileDumper-7-arm64
+          path: builds/android/exe/release/arm64/MobileDumper-7
           if-no-files-found: error
           retention-days: 30
