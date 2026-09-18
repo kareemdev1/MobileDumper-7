@@ -1,0 +1,53 @@
+name: Build MobileDumper-7
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Android NDK r27
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27
+          add-to-path: true
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Verify NDK
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+          ls -la $ANDROID_NDK_HOME
+
+      - name: Build arm64 executable
+        run: |
+          chmod +x build.sh
+          ./build.sh --platform android --target exe --build release --arch arm64
+
+      - name: Locate binary
+        run: |
+          echo "=== All MobileDumper7 files ==="
+          find . -name "*MobileDumper7*" -type f 2>/dev/null || true
+          echo "=== build folder ==="
+          ls -laR build/ 2>/dev/null || echo "no build folder"
+
+      - name: Upload arm64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobileDumper7-arm64
+          path: |
+            build/**/MobileDumper7
+            build/**/*MobileDumper7*
+            **/MobileDumper7
+          if-no-files-found: warn
+          retention-days: 30
